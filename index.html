@@ -258,7 +258,9 @@
    ⚙️  CONFIGURAZIONE
 ══════════════════════════════════════════════ */
 const WORKER_URL    = 'https://corsadelleuova.matteocastelli86.workers.dev';
-const POLL_INTERVAL = 5000;
+const POLL_INTERVAL = 8000; // 8s: col Durable Object il dato è già corretto quando arriva,
+                             // quindi allungare il polling risparmia richieste/giorno senza
+                             // reintrodurre il vecchio problema di ritardo
 
 /* ══════════════════════════════════════════════
    TEMA
