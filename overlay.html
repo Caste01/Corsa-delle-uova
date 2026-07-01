@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Corsa delle Uova — Overlay OBS</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    width: 100%; height: 100%;
+    background: transparent;   /* fondamentale per OBS: niente sfondo opaco qui */
+    overflow: hidden;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+
+  #panel {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    gap: clamp(6px, 2vw, 12px);
+    background: rgba(13, 17, 23, 0.55);   /* pannello scuro semi-trasparente */
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    border-radius: clamp(8px, 3vw, 18px);
+    padding: clamp(8px, 3vw, 16px);
+  }
+
+  .head {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+    color: #fff;
+  }
+  .title {
+    display: flex; align-items: center; gap: 7px;
+    font-weight: 800;
+    font-size: clamp(11px, 3vw, 17px);
+    white-space: nowrap;
+    text-shadow: 0 1px 3px rgba(0,0,0,.5);
+  }
+  .live-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #e74c3c; flex-shrink: 0;
+    animation: blink 1.2s ease-in-out infinite;
+  }
+  .live-dot.offline { background: #7f8c8d; animation: none; opacity: .5; }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+
+  .count {
+    font-weight: 800;
+    font-size: clamp(13px, 3.6vw, 20px);
+    color: #2ecc71;
+    text-shadow: 0 1px 3px rgba(0,0,0,.5);
+    white-space: nowrap;
+  }
+  .count .of { color: rgba(255,255,255,0.55); font-weight: 700; }
+
+  #grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    grid-auto-rows: 1fr;
+    gap: clamp(2px, 0.8vw, 5px);
+    min-height: 0;
+  }
+  .cell {
+    border-radius: 3px;
+    background: rgba(246, 216, 96, 0.20);
+    border: 1.4px solid rgba(246, 216, 96, 0.75);
+    transition: background .3s ease, border-color .3s ease;
+  }
+  .cell.done {
+    background: rgba(46, 204, 113, 0.45);
+    border-color: #2ecc71;
+  }
+  @keyframes pop {
+    0%   { transform: scale(1); }
+    45%  { transform: scale(1.4); filter: brightness(1.4); }
+    100% { transform: scale(1); }
+  }
+  .cell.pop { animation: pop .45s ease; }
+</style>
+</head>
+<body>
+
+  <div id="panel">
+    <div class="head">
+      <div class="title"><span class="live-dot" id="live-dot"></span>🥚 Corsa delle Uova</div>
+      <div class="count"><span id="c-done">0</span><span class="of">/100</span></div>
+    </div>
+    <div id="grid"></div>
+  </div>
+
+<script>
+/* ══════════════════════════════════════════════
+   ⚙️  CONFIGURAZIONE
+══════════════════════════════════════════════ */
+const WORKER_URL    = 'https://corsadelleuova.matteocastelli86.workers.dev';
+const POLL_INTERVAL = 8000;
+const TOTAL_EGGS    = 100;
+
+let prevDelivered = new Set();
+
+(function buildGrid(){
+  const g = document.getElementById('grid');
+  for (let i = 1; i <= TOTAL_EGGS; i++) {
+    const c = document.createElement('div');
+    c.className = 'cell';
+    c.dataset.n = i;
+    g.appendChild(c);
+  }
+})();
+
+async function fetchState(){
+  try {
+    const res  = await fetch(WORKER_URL + '/state?t=' + Date.now(), { cache: 'no-store' });
+    const data = await res.json();
+    render(data);
+    document.getElementById('live-dot').classList.remove('offline');
+  } catch (e) {
+    document.getElementById('live-dot').classList.add('offline');
+  }
+}
+
+function render(state){
+  const delivered = state.delivered || [];
+  document.getElementById('c-done').textContent = delivered.length;
+
+  const dSet = new Set(delivered);
+  document.querySelectorAll('.cell').forEach(cell => {
+    const n = +cell.dataset.n;
+    const wasDone = prevDelivered.has(n), isDone = dSet.has(n);
+    cell.classList.toggle('done', isDone);
+    if (isDone && !wasDone) {
+      cell.classList.remove('pop'); void cell.offsetWidth; cell.classList.add('pop');
+    }
+  });
+  prevDelivered = dSet;
+}
+
+fetchState();
+setInterval(fetchState, POLL_INTERVAL);
+</script>
+</body>
+</html>
