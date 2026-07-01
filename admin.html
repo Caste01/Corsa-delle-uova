@@ -478,13 +478,23 @@ function setSyncStatus(status, label){
   document.getElementById('sync-label').textContent = label;
 }
 
+/* syncToWorker è in coda (mutex) e ritenta sempre, sia su errore di
+   rete sia su risposta HTTP non-ok: prima due tap veloci potevano far
+   partire due fetch in parallelo che si sovrascrivevano a vicenda
+   (l'aggiornamento delle uova "si perdeva"), e un errore HTTP (es.
+   password/ADMIN_KEY diversi) non veniva mai ritentato. */
+let syncBusy = false, syncPending = false, syncRetryTimer = null;
+
 async function syncToWorker(){
+  if (syncRetryTimer){ clearTimeout(syncRetryTimer); syncRetryTimer = null; }
+  if (syncBusy){ syncPending = true; return; }
+  syncBusy = true;
   setSyncStatus('syncing','Sincronizzazione...');
   const payload = {
-    delivered:    state.delivered,
-    history:      state.history,
-    timerMs:      timerGetMs(),
-    timerRunning: state.timerStart !== null,
+    delivered:  state.delivered,
+    history:    state.history,
+    timerMs:    timerGetMs(),
+    timerStart: state.timerStart,
   };
   try {
     const res = await fetch(WORKER_URL+'/update', {
@@ -492,11 +502,18 @@ async function syncToWorker(){
       headers: { 'Content-Type':'application/json', 'X-Admin-Key': ADMIN_PASSWORD },
       body: JSON.stringify(payload),
     });
-    if (res.ok) setSyncStatus('synced', 'Sincronizzato ✓');
-    else        setSyncStatus('error',  'Errore risposta Worker');
+    if (res.ok) {
+      setSyncStatus('synced', 'Sincronizzato ✓');
+    } else {
+      setSyncStatus('error', 'Errore risposta Worker — riprovo...');
+      syncRetryTimer = setTimeout(syncToWorker, 4000);
+    }
   } catch(e) {
     setSyncStatus('error', 'Offline — riprovo...');
-    setTimeout(syncToWorker, 5000);
+    syncRetryTimer = setTimeout(syncToWorker, 4000);
+  } finally {
+    syncBusy = false;
+    if (syncPending){ syncPending = false; syncToWorker(); }
   }
 }
 
@@ -509,7 +526,15 @@ async function loadFromWorker(){
       state.delivered = data.delivered;
       state.history   = data.history || [];
       state.timerMs   = data.timerMs || 0;
-      state.timerStart= null;
+      state.timerStart= data.timerStart || null;
+      // se il cronometro era già in corso (es. ricarico la pagina admin),
+      // riprendi il ticking locale invece di congelarlo a null
+      if (state.timerStart !== null){
+        timerInterval = setInterval(timerTick, 500);
+        document.getElementById('btn-start').disabled = true;
+        document.getElementById('btn-stop').disabled  = false;
+        document.getElementById('timer-display').classList.add('running');
+      }
     }
     setSyncStatus('synced','Caricato ✓');
   } catch(e) {
@@ -543,6 +568,7 @@ function timerStart(){
   document.getElementById('btn-stop').disabled=false;
   document.getElementById('timer-display').classList.add('running');
   timerTick();
+  syncToWorker(); // propaga subito timerStart, così anche gli altri schermi ticchettano
 }
 function timerStop(){
   if(state.timerStart===null) return;
@@ -552,6 +578,7 @@ function timerStop(){
   document.getElementById('btn-stop').disabled=true;
   document.getElementById('timer-display').classList.remove('running');
   timerTick();
+  syncToWorker();
 }
 function timerReset(){ timerStop(); state.timerMs=0; timerTick(); }
 function timerTick(){
@@ -701,6 +728,10 @@ async function initApp(){
   await loadFromWorker();
   updateUI();
   timerTick();
+  // heartbeat: rimanda lo stato ogni 4s come rete di sicurezza, così un
+  // eventuale aggiornamento perso (offline, errore, tap in rapida
+  // successione) viene comunque recuperato entro pochi secondi
+  setInterval(syncToWorker, 4000);
 }
 </script>
 </body>

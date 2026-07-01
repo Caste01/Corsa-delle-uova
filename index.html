@@ -138,7 +138,7 @@
     #victory h2{font-size:1.5rem;margin-bottom:6px}
     #victory p{font-size:.9rem;opacity:.92;line-height:1.7}
 
-    ::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar{width:4px}
     ::-webkit-scrollbar-track{background:transparent}
     ::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
   </style>
@@ -258,7 +258,7 @@
    ⚙️  CONFIGURAZIONE
 ══════════════════════════════════════════════ */
 const WORKER_URL    = 'https://corsadelleuova.matteocastelli86.workers.dev';
-const POLL_INTERVAL = 3000;
+const POLL_INTERVAL = 5000;
 
 /* ══════════════════════════════════════════════
    TEMA
@@ -294,29 +294,13 @@ const TOTAL_METERS = 2*(TOTAL_EGGS*(TOTAL_EGGS+1)/2);
 let lastFetchedAt  = null;
 let prevDelivered  = new Set();
 
-// timer locale che scorre tra un polling e l'altro
-let localTimerMs      = 0;
-let localTimerRunning = false;
-let localTimerBase    = 0; // Date.now() al momento dell'ultimo snapshot
+// stato del cronometro tenuto localmente per farlo scorrere ogni frame,
+// invece di aggiornarlo solo ogni 5s quando arriva un nuovo poll
+let curTimerMs    = 0;
+let curTimerStart = null;
+let curTraveled   = 0;
+let curDone       = 0;
 
-function localTimerTick() {
-  const el = document.getElementById('v-timer');
-  if (!el) return;
-  const ms  = localTimerRunning ? localTimerMs + (Date.now() - localTimerBase) : localTimerMs;
-  const sec = Math.floor(ms / 1000);
-  el.textContent = String(Math.floor(sec / 60)).padStart(2,'0') + ':' + String(sec % 60).padStart(2,'0');
-  el.className   = localTimerRunning ? 'running' : '';
-
-  const traveled = parseFloat(document.getElementById('stat-traveled').textContent.replace(/\./g,'').replace(',','.')) || 0;
-  const pace = document.getElementById('v-pace');
-  if (ms > 5000 && traveled > 0) {
-    document.getElementById('v-pace-val').textContent = ((traveled / ms) * 60000).toFixed(1);
-    pace.style.display = '';
-  } else {
-    pace.style.display = 'none';
-  }
-}
-setInterval(localTimerTick, 500);
 
 /* ══════════════════════════════════════════════
    POLLING
@@ -368,7 +352,7 @@ function calcAvg(d){ const t=calcTraveled(d),n=d.length; return n?Math.round(t/n
    RENDER
 ══════════════════════════════════════════════ */
 function renderAll(state){
-  const { delivered=[], history=[], timerMs=0 } = state;
+  const { delivered=[], history=[], timerMs=0, timerStart=null } = state;
   const traveled=calcTraveled(delivered), remaining=calcRemaining(delivered);
   const done=delivered.length, left=TOTAL_EGGS-done, avg=calcAvg(delivered);
 
@@ -379,11 +363,14 @@ function renderAll(state){
   document.getElementById('stat-avg').textContent       = avg!==null?avg:'—';
   document.getElementById('prog-eggs').style.width      = ((done/TOTAL_EGGS)*100)+'%';
 
-  // aggiorna riferimenti per il timer locale
-  localTimerMs      = timerMs;
-  localTimerRunning = !!state.timerRunning;
-  localTimerBase    = Date.now();
-  localTimerTick();
+  // salva lo stato del cronometro: il ticking vero e proprio lo fa
+  // tickTimer(), chiamato ogni 250ms, così scorre da solo tra un poll
+  // e l'altro invece di restare fermo per 5 secondi
+  curTimerMs    = timerMs;
+  curTimerStart = timerStart;
+  curTraveled   = traveled;
+  curDone       = done;
+  tickTimer();
 
   // griglia con pop su nuove consegne
   const dSet=new Set(delivered);
@@ -426,6 +413,29 @@ function renderList(id, history, onlyRecent){
 }
 
 function fmt(n){ return n.toLocaleString('it-IT'); }
+
+/* ══════════════════════════════════════════════
+   CRONOMETRO — ticking locale
+   Il worker ci dice solo timerMs (ultimo valore salvato) e
+   timerStart (quando è partito). Se è in corso, interpoliamo
+   localmente ogni 250ms così il tempo scorre da solo invece di
+   restare fermo fino al prossimo poll (ogni 5s).
+══════════════════════════════════════════════ */
+function tickTimer(){
+  const ms  = curTimerStart!==null ? curTimerMs + (Date.now()-curTimerStart) : curTimerMs;
+  const sec = Math.floor(ms/1000);
+  const el  = document.getElementById('v-timer');
+  el.textContent = String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0');
+  el.className   = (curTimerStart!==null && curDone<TOTAL_EGGS) ? 'running' : '';
+  const pace = document.getElementById('v-pace');
+  if (ms > 5000 && curTraveled > 0) {
+    document.getElementById('v-pace-val').textContent = ((curTraveled/ms)*60000).toFixed(1);
+    pace.style.display = '';
+  } else {
+    pace.style.display = 'none';
+  }
+}
+setInterval(tickTimer, 250);
 
 /* ══════════════════════════════════════════════
    GRIGLIA INIT
