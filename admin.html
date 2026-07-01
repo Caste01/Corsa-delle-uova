@@ -482,8 +482,11 @@ function setSyncStatus(status, label){
    rete sia su risposta HTTP non-ok: prima due tap veloci potevano far
    partire due fetch in parallelo che si sovrascrivevano a vicenda
    (l'aggiornamento delle uova "si perdeva"), e un errore HTTP (es.
-   password/ADMIN_KEY diversi) non veniva mai ritentato. */
-let syncBusy = false, syncPending = false, syncRetryTimer = null;
+   password/ADMIN_KEY diversi) non veniva mai ritentato.
+   syncController serve per poter ANNULLARE una /update già partita:
+   il reset lo usa per essere sicuro che nessun aggiornamento "vecchio"
+   possa arrivare al Worker dopo la /reset e sovrascriverla. */
+let syncBusy = false, syncPending = false, syncRetryTimer = null, syncController = null;
 
 async function syncToWorker(){
   if (syncRetryTimer){ clearTimeout(syncRetryTimer); syncRetryTimer = null; }
@@ -501,11 +504,14 @@ async function syncToWorker(){
     timerMs:    state.timerMs,
     timerStart: state.timerStart,
   };
+  const controller = new AbortController();
+  syncController = controller;
   try {
     const res = await fetch(WORKER_URL+'/update', {
       method: 'POST',
       headers: { 'Content-Type':'application/json', 'X-Admin-Key': ADMIN_PASSWORD },
       body: JSON.stringify(payload),
+      signal: controller.signal,
     });
     if (res.ok) {
       setSyncStatus('synced', 'Sincronizzato ✓');
@@ -514,12 +520,27 @@ async function syncToWorker(){
       syncRetryTimer = setTimeout(syncToWorker, 4000);
     }
   } catch(e) {
-    setSyncStatus('error', 'Offline — riprovo...');
-    syncRetryTimer = setTimeout(syncToWorker, 4000);
+    if (e.name === 'AbortError') {
+      // annullata volontariamente (es. da un reset): non è un errore,
+      // non va ritentata con dati ormai superati
+    } else {
+      setSyncStatus('error', 'Offline — riprovo...');
+      syncRetryTimer = setTimeout(syncToWorker, 4000);
+    }
   } finally {
     syncBusy = false;
+    if (syncController === controller) syncController = null;
     if (syncPending){ syncPending = false; syncToWorker(); }
   }
+}
+
+/* Annulla qualunque sincronizzazione in corso o in coda: usata dal
+   reset per evitare che una /update con lo stato vecchio (partita ad
+   es. da timerStop) arrivi al Worker dopo la /reset e la sovrascriva. */
+function cancelPendingSync(){
+  if (syncRetryTimer){ clearTimeout(syncRetryTimer); syncRetryTimer = null; }
+  syncPending = false;
+  if (syncController){ syncController.abort(); syncController = null; }
 }
 
 async function loadFromWorker(){
@@ -696,7 +717,14 @@ function fmt(n){ return n.toLocaleString('it-IT'); }
 function openResetModal(){ document.getElementById('modal').classList.add('open'); }
 function closeModal()     { document.getElementById('modal').classList.remove('open'); }
 async function confirmReset(){
-  timerStop(); state=defaultState(); closeModal();
+  // Reset SOLO locale del cronometro: niente timerStop(), altrimenti
+  // parte una syncToWorker() con lo stato vecchio (uova+tempo) che
+  // corre in parallelo alla /reset qui sotto — se arriva dopo, la
+  // sovrascrive e il sito resta bloccato su un tempo che non è 00:00.
+  cancelPendingSync();
+  clearInterval(timerInterval); timerInterval=null;
+
+  state=defaultState(); closeModal();
   ndBuffer=''; ndRender(); clearError();
   document.getElementById('timer-display').textContent='00:00';
   document.getElementById('timer-display').classList.remove('running');
@@ -704,7 +732,7 @@ async function confirmReset(){
   document.getElementById('btn-stop').disabled=true;
   document.getElementById('timer-pace').style.display='none';
   updateUI();
-  // reset anche sul Worker
+  // reset anche sul Worker — questa è l'unica scrittura che deve arrivare
   setSyncStatus('syncing','Reset in corso...');
   try{
     await fetch(WORKER_URL+'/reset',{method:'POST',headers:{'X-Admin-Key':ADMIN_PASSWORD}});
