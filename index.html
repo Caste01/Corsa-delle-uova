@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>🥚 Corsa delle Uova</title>
+  <style>
+    /* ══════════════════════════════════════════
+       VARIABILI — LIGHT & DARK
+    ══════════════════════════════════════════ */
+    :root {
+      --green:       #27ae60;
+      --green-light: #2ecc71;
+      --orange:      #e67e22;
+      --orange-lt:   #f39c12;
+      --blue:        #2980b9;
+      --red:         #e74c3c;
+      --purple:      #8e44ad;
+      --radius:      14px;
+      --r-sm:        10px;
+
+      --bg:          #f0f4f8;
+      --card:        #ffffff;
+      --text:        #2c3e50;
+      --muted:       #7f8c8d;
+      --border:      #dfe6e9;
+      --item:        #f4f6f8;
+      --prog-bg:     #e8ecef;
+      --shadow:      0 2px 12px rgba(0,0,0,0.08);
+      --shadow-lg:   0 4px 24px rgba(0,0,0,0.13);
+
+      --egg-bg:      #fff8e1;
+      --egg-border:  #f6d860;
+      --egg-text:    #856404;
+      --done-bg:     #e8f5e9;
+      --done-border: #27ae60;
+
+      --tab-h:       62px;
+      --header-h:    52px;
+    }
+
+    [data-theme="dark"] {
+      --bg:          #0d1117;
+      --card:        #161b22;
+      --text:        #e6edf3;
+      --muted:       #8b949e;
+      --border:      #30363d;
+      --item:        #1c2128;
+      --prog-bg:     #21262d;
+      --shadow:      0 2px 12px rgba(0,0,0,0.3);
+      --shadow-lg:   0 4px 24px rgba(0,0,0,0.45);
+      --egg-bg:      #2a2510;
+      --egg-border:  #6b5c0e;
+      --egg-text:    #e6c84a;
+      --done-bg:     #0f2018;
+      --done-border: #2ecc71;
+    }
+
+    /* ══════════════════════════════════════════
+       RESET & BASE
+    ══════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      /* usa dvh dove supportato per gestire la barra indirizzi mobile */
+      height: 100dvh;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      transition: background 0.25s, color 0.25s;
+      /* safe area per notch iPhone */
+      padding-top: env(safe-area-inset-top);
+    }
+
+    /* ══════════════════════════════════════════
+       HEADER
+    ══════════════════════════════════════════ */
+    header {
+      height: var(--header-h);
+      flex-shrink: 0;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      gap: 8px;
+      box-shadow: var(--shadow);
+      z-index: 10;
+    }
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+    }
+    .header-title span { font-size: 1.4rem; }
+
+    #theme-btn {
+      background: var(--item);
+      border: 1.5px solid var(--border);
+      color: var(--text);
+      border-radius: 99px;
+      padding: 6px 12px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      touch-action: manipulation;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: background 0.2s;
+    }
+
+    /* ══════════════════════════════════════════
+       SCROLLABLE CONTENT AREA
+    ══════════════════════════════════════════ */
+    .content-area {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      padding: 12px 14px;
+      padding-bottom: 8px;
+    }
+
+    /* ══════════════════════════════════════════
+       TAB PANELS
+    ══════════════════════════════════════════ */
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ══════════════════════════════════════════
+       BOTTOM TAB BAR
+    ══════════════════════════════════════════ */
+    .bottom-tabs {
+      height: var(--tab-h);
+      flex-shrink: 0;
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: stretch;
+      padding-bottom: env(safe-area-inset-bottom);
+      box-shadow: 0 -2px 12px rgba(0,0,0,0.07);
+      z-index: 10;
+    }
+    .tab-btn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      touch-action: manipulation;
+      color: var(--muted);
+      font-size: 0.68rem;
+      font-weight: 600;
+      transition: color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .tab-btn .tab-icon { font-size: 1.4rem; line-height: 1; }
+    .tab-btn.active { color: var(--orange); }
+    .tab-btn.active .tab-icon { transform: scale(1.1); }
+
+    /* ══════════════════════════════════════════
+       CARDS GENERICHE
+    ══════════════════════════════════════════ */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .card-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    /* ══════════════════════════════════════════
+       TIMER (compatto)
+    ══════════════════════════════════════════ */
+    .timer-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    #timer-display {
+      font-size: 2rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      min-width: 90px;
+    }
+    #timer-display.running { color: var(--green); }
+
+    .timer-btns { display: flex; gap: 6px; }
+    .tbtn {
+      border: none;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .tbtn:active { transform: scale(0.95); }
+    .tbtn-start { background: var(--green);  color: #fff; }
+    .tbtn-stop  { background: var(--orange); color: #fff; }
+    .tbtn-reset { background: var(--item); color: var(--muted);
+                  border: 1.5px solid var(--border); }
+    .tbtn:disabled { opacity: 0.35; pointer-events: none; }
+
+    .timer-pace {
+      margin-left: auto;
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-align: right;
+      line-height: 1.5;
+    }
+    .timer-pace strong { color: var(--text); font-size: 0.95rem; }
+
+    /* ══════════════════════════════════════════
+       STATISTICHE
+    ══════════════════════════════════════════ */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .stat-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 12px 10px;
+      text-align: center;
+    }
+    .stat-card .s-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .stat-card .s-value {
+      font-size: 1.75rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .s-remaining .s-value { color: var(--orange); }
+    .s-done      .s-value { color: var(--green);  }
+    .s-traveled  .s-value { color: var(--blue);   }
+    .s-left      .s-value { color: var(--muted);  }
+
+    /* progress bar */
+    .prog-wrap {
+      margin-top: 6px;
+      background: var(--prog-bg);
+      border-radius: 99px;
+      height: 5px;
+      overflow: hidden;
+    }
+    .prog-bar {
+      height: 100%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, var(--green-light), var(--green));
+      transition: width 0.4s ease;
+      width: 0%;
+    }
+
+    /* riga extra stats (avg + errore) */
+    .stats-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .stat-pill {
+      flex: 1;
+      background: var(--card);
+      border-radius: var(--r-sm);
+      box-shadow: var(--shadow);
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.82rem;
+    }
+    .stat-pill .sp-label { color: var(--muted); }
+    .stat-pill .sp-value { font-weight: 800; color: var(--purple); }
+
+    /* ══════════════════════════════════════════
+       TASTIERINO CUSTOM
+    ══════════════════════════════════════════ */
+    .numpad-display {
+      background: var(--item);
+      border: 2px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      gap: 10px;
+    }
+    .nd-label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    #nd-value {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: var(--text);
+      text-align: right;
+      flex: 1;
+      min-width: 60px;
+    }
+    #nd-value.placeholder { color: var(--border); }
+    #nd-value.has-value   { color: var(--orange); }
+    #nd-value.error-val   { color: var(--red); animation: shake 0.3s; }
+
+    .error-msg {
+      color: var(--red);
+      font-size: 0.82rem;
+      font-weight: 600;
+      min-height: 18px;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    /* griglia numpad 4×3 */
+    .numpad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .nk {
+      aspect-ratio: 1.6;
+      border: none;
+      border-radius: var(--r-sm);
+      font-size: 1.5rem;
+      font-weight: 700;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.08s, filter 0.08s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .nk:active { transform: scale(0.92); filter: brightness(0.88); }
+
+    .nk-digit {
+      background: var(--card);
+      color: var(--text);
+      box-shadow: var(--shadow);
+      font-size: 1.4rem;
+    }
+    .nk-del {
+      background: var(--item);
+      color: var(--muted);
+      box-shadow: var(--shadow);
+      font-size: 1.3rem;
+      border: 1.5px solid var(--border);
+    }
+    .nk-confirm {
+      background: linear-gradient(135deg, var(--orange), var(--orange-lt));
+      color: #fff;
+      box-shadow: 0 3px 10px rgba(230,126,34,0.35);
+      font-size: 1.5rem;
+    }
+    .nk-undo {
+      background: var(--item);
+      color: var(--muted);
+      box-shadow: var(--shadow);
+      font-size: 1rem;
+      border: 1.5px solid var(--border);
+    }
+    .nk:disabled { opacity: 0.3; pointer-events: none; }
+
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      25%      { transform: translateX(-5px); }
+      75%      { transform: translateX(5px); }
+    }
+
+    /* ══════════════════════════════════════════
+       VITTORIA
+    ══════════════════════════════════════════ */
+    #victory {
+      display: none;
+      background: linear-gradient(135deg, var(--green), var(--green-light));
+      color: #fff;
+      border-radius: var(--radius);
+      padding: 18px;
+      text-align: center;
+      margin-bottom: 12px;
+      animation: popIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    @keyframes popIn {
+      from { transform: scale(0.7); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+    #victory h2 { font-size: 1.4rem; margin-bottom: 6px; }
+    #victory p  { font-size: 0.88rem; opacity: 0.92; line-height: 1.6; }
+
+    /* ══════════════════════════════════════════
+       GRIGLIA UOVA
+    ══════════════════════════════════════════ */
+    .grid-legend {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .gl-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .gl-dot {
+      width: 13px; height: 13px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    #egg-grid {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 4px;
+    }
+    .egg-cell {
+      aspect-ratio: 1;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.55rem;
+      font-weight: 700;
+      cursor: default;
+      transition: background 0.3s, border-color 0.3s, transform 0.15s;
+      background: var(--egg-bg);
+      border: 1.5px solid var(--egg-border);
+      color: var(--egg-text);
+      line-height: 1.1;
+    }
+    .egg-cell:hover { transform: scale(1.15); z-index: 2; }
+    .egg-cell.delivered {
+      background: var(--done-bg);
+      border-color: var(--done-border);
+      color: var(--green);
+    }
+    .egg-cell::before { content: '🥚'; font-size: 0.82rem; display: block; }
+    .egg-cell.delivered::before { content: '✅'; }
+
+    @keyframes flash-cell {
+      0%   { transform: scale(1); }
+      30%  { transform: scale(1.3); filter: brightness(1.5); }
+      70%  { transform: scale(1.1); }
+      100% { transform: scale(1); filter: brightness(1); }
+    }
+    .egg-cell.flash { animation: flash-cell 0.5s ease; }
+
+    /* ══════════════════════════════════════════
+       STORICO
+    ══════════════════════════════════════════ */
+    #history-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    #history-list li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: var(--item);
+      border-radius: 9px;
+      font-size: 0.9rem;
+    }
+    .hi-egg   { font-weight: 800; color: var(--orange); }
+    .hi-dist  { color: var(--blue); font-weight: 700; }
+    .hi-total { color: var(--muted); font-size: 0.78rem; }
+    .history-empty {
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-style: italic;
+      background: none !important;
+      justify-content: center !important;
+    }
+
+    /* ══════════════════════════════════════════
+       RESET FOOTER
+    ══════════════════════════════════════════ */
+    .reset-row {
+      text-align: center;
+      margin-top: 4px;
+      margin-bottom: 4px;
+    }
+    .btn-reset {
+      background: none;
+      border: 2px solid var(--red);
+      color: var(--red);
+      border-radius: 9px;
+      padding: 9px 22px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: background 0.2s, color 0.2s;
+    }
+    .btn-reset:hover, .btn-reset:active { background: var(--red); color: #fff; }
+
+    /* ══════════════════════════════════════════
+       MODAL
+    ══════════════════════════════════════════ */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 26px 22px;
+      max-width: 320px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+    }
+    .modal h3 { font-size: 1.15rem; margin-bottom: 9px; }
+    .modal p  { color: var(--muted); font-size: 0.88rem; margin-bottom: 18px; line-height: 1.5; }
+    .modal-btns { display: flex; gap: 10px; justify-content: center; }
+    .mbtn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 9px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .mbtn-ok  { background: linear-gradient(135deg, var(--orange), var(--orange-lt)); color: #fff; }
+    .mbtn-no  { background: var(--item); color: var(--muted); border: 1.5px solid var(--border); }
+
+    /* scrollbar minimal */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+  </style>
+</head>
+<body>
+
+  <!-- ════════════════════ HEADER ════════════════════ -->
+  <header>
+    <div class="header-title">
+      <span>🥚</span> Corsa delle Uova
+    </div>
+    <button id="theme-btn" onclick="toggleTheme()">
+      <span id="theme-icon">🌙</span>
+      <span id="theme-label">Scuro</span>
+    </button>
+  </header>
+
+  <!-- ════════════════════ CONTENT ═══════════════════ -->
+  <div class="content-area" id="scroll-area">
+
+    <!-- ── TAB: GARA ────────────────────────────────── -->
+    <div class="tab-panel active" id="tab-gara">
+
+      <!-- Vittoria -->
+      <div id="victory">
+        <h2>🏆 Gara completata!</h2>
+        <p id="victory-msg"></p>
+      </div>
+
+      <!-- Cronometro -->
+      <div class="card">
+        <div class="timer-row">
+          <div id="timer-display">00:00</div>
+          <div class="timer-btns">
+            <button class="tbtn tbtn-start" id="btn-start" onclick="timerStart()">▶</button>
+            <button class="tbtn tbtn-stop"  id="btn-stop"  onclick="timerStop()"  disabled>⏸</button>
+            <button class="tbtn tbtn-reset" onclick="timerReset()">↺</button>
+          </div>
+          <div class="timer-pace" id="timer-pace" style="display:none">
+            <span>Ritmo</span><br>
+            <strong id="pace-val">—</strong> m/min
+          </div>
+        </div>
+      </div>
+
+      <!-- Statistiche -->
+      <div class="stats-grid">
+        <div class="stat-card s-remaining">
+          <div class="s-label">🥚 Uova rimaste</div>
+          <div class="s-value" id="stat-remaining">100</div>
+          <div class="prog-wrap">
+            <div class="prog-bar" id="prog-eggs"></div>
+          </div>
+        </div>
+        <div class="stat-card s-done">
+          <div class="s-label">✅ Consegnate</div>
+          <div class="s-value" id="stat-done">0</div>
+        </div>
+        <div class="stat-card s-traveled">
+          <div class="s-label">📍 Metri percorsi</div>
+          <div class="s-value" id="stat-traveled">0</div>
+        </div>
+        <div class="stat-card s-left">
+          <div class="s-label">🏁 Metri rimasti</div>
+          <div class="s-value" id="stat-left">10.100</div>
+        </div>
+      </div>
+
+      <!-- Media m/viaggio -->
+      <div class="stats-row">
+        <div class="stat-pill">
+          <span class="sp-label">📐 Media m/viaggio</span>
+          <span class="sp-value" id="stat-avg">—</span>
+        </div>
+      </div>
+
+      <!-- TASTIERINO -->
+      <div class="card" id="input-section">
+        <!-- display numero -->
+        <div class="numpad-display">
+          <span class="nd-label">Uovo N°</span>
+          <span id="nd-value" class="placeholder">_ _</span>
+        </div>
+        <!-- errore -->
+        <div class="error-msg" id="error-msg"></div>
+        <!-- griglia tasti -->
+        <div class="numpad-grid">
+          <button class="nk nk-digit" onclick="ndKey('1')">1</button>
+          <button class="nk nk-digit" onclick="ndKey('2')">2</button>
+          <button class="nk nk-digit" onclick="ndKey('3')">3</button>
+          <button class="nk nk-digit" onclick="ndKey('4')">4</button>
+          <button class="nk nk-digit" onclick="ndKey('5')">5</button>
+          <button class="nk nk-digit" onclick="ndKey('6')">6</button>
+          <button class="nk nk-digit" onclick="ndKey('7')">7</button>
+          <button class="nk nk-digit" onclick="ndKey('8')">8</button>
+          <button class="nk nk-digit" onclick="ndKey('9')">9</button>
+          <button class="nk nk-undo"  onclick="undoLast()" id="undo-btn" disabled>↩ Annulla</button>
+          <button class="nk nk-digit" onclick="ndKey('0')">0</button>
+          <button class="nk nk-del"   onclick="ndDel()">⌫</button>
+        </div>
+        <!-- riga conferma -->
+        <div style="margin-top:8px;">
+          <button class="nk nk-confirm" style="width:100%;aspect-ratio:unset;padding:14px;"
+                  onclick="ndConfirm()">✔ Consegna</button>
+        </div>
+      </div>
+
+      <!-- Reset -->
+      <div class="reset-row">
+        <button class="btn-reset" onclick="openResetModal()">🔄 Nuova gara</button>
+      </div>
+
+    </div><!-- /tab-gara -->
+
+    <!-- ── TAB: GRIGLIA ──────────────────────────────── -->
+    <div class="tab-panel" id="tab-griglia">
+      <div class="card">
+        <div class="card-title">🗺️ Mappa delle uova</div>
+        <div class="grid-legend">
+          <div class="gl-item">
+            <div class="gl-dot" style="background:var(--egg-bg);border:1.5px solid var(--egg-border);"></div>
+            Da raccogliere
+          </div>
+          <div class="gl-item">
+            <div class="gl-dot" style="background:var(--done-bg);border:1.5px solid var(--done-border);"></div>
+            Consegnato
+          </div>
+        </div>
+        <div id="egg-grid"></div>
+      </div>
+    </div><!-- /tab-griglia -->
+
+    <!-- ── TAB: STORICO ──────────────────────────────── -->
+    <div class="tab-panel" id="tab-storico">
+      <div class="card">
+        <div class="card-title">📋 Tutte le consegne</div>
+        <ul id="history-list">
+          <li class="history-empty">Nessuna consegna ancora registrata.</li>
+        </ul>
+      </div>
+    </div><!-- /tab-storico -->
+
+  </div><!-- /content-area -->
+
+  <!-- ════════════════════ BOTTOM TABS ════════════════ -->
+  <nav class="bottom-tabs">
+    <button class="tab-btn active" id="tbtn-gara"    onclick="switchTab('gara')">
+      <span class="tab-icon">🏁</span> Gara
+    </button>
+    <button class="tab-btn"       id="tbtn-griglia"  onclick="switchTab('griglia')">
+      <span class="tab-icon">🗺️</span> Griglia
+    </button>
+    <button class="tab-btn"       id="tbtn-storico"  onclick="switchTab('storico')">
+      <span class="tab-icon">📋</span> Storico
+    </button>
+  </nav>
+
+  <!-- ════════════════════ MODAL RESET ════════════════ -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <h3>🔄 Nuova gara?</h3>
+      <p>Tutti i dati della gara corrente (compreso il cronometro) verranno cancellati.</p>
+      <div class="modal-btns">
+        <button class="mbtn mbtn-ok" onclick="confirmReset()">Sì, ricomincia</button>
+        <button class="mbtn mbtn-no" onclick="closeModal()">Annulla</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ══════════════════════════════════════════════
+   COSTANTI
+══════════════════════════════════════════════ */
+const TOTAL_EGGS   = 100;
+const TOTAL_METERS = 2 * (TOTAL_EGGS * (TOTAL_EGGS + 1) / 2); // 10100
+
+/* ══════════════════════════════════════════════
+   TEMA
+══════════════════════════════════════════════ */
+(function initTheme() {
+  const t = localStorage.getItem('cdu-theme') || 'light';
+  applyTheme(t);
+})();
+
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('theme-icon').textContent  = t === 'dark' ? '☀️' : '🌙';
+  document.getElementById('theme-label').textContent = t === 'dark' ? 'Chiaro' : 'Scuro';
+  localStorage.setItem('cdu-theme', t);
+}
+function toggleTheme() {
+  applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+}
+
+/* ══════════════════════════════════════════════
+   TAB NAVIGATION
+══════════════════════════════════════════════ */
+let currentTab = 'gara';
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.getElementById('tbtn-' + name).classList.add('active');
+  document.getElementById('scroll-area').scrollTop = 0;
+  currentTab = name;
+}
+
+/* ══════════════════════════════════════════════
+   STATO GARA
+══════════════════════════════════════════════ */
+let state = loadState();
+
+function defaultState() {
+  return { delivered: [], history: [], timerMs: 0, timerStart: null };
+}
+function loadState() {
+  try {
+    const s = sessionStorage.getItem('cdu-state');
+    if (!s) return defaultState();
+    const p = JSON.parse(s);
+    p.timerStart = null; // ripartiamo sempre fermi
+    return p;
+  } catch { return defaultState(); }
+}
+function saveState() {
+  const s = { ...state, timerMs: timerGetMs(), timerStart: null };
+  try { sessionStorage.setItem('cdu-state', JSON.stringify(s)); } catch {}
+}
+
+/* ══════════════════════════════════════════════
+   CALCOLI
+══════════════════════════════════════════════ */
+function calcTraveled() { return state.delivered.reduce((a,n) => a + 2*n, 0); }
+function calcRemaining() {
+  const d = new Set(state.delivered);
+  let r = 0;
+  for (let i=1; i<=TOTAL_EGGS; i++) if (!d.has(i)) r += 2*i;
+  return r;
+}
+function calcAvg() {
+  const n = state.delivered.length;
+  return n ? Math.round(calcTraveled() / n) : null;
+}
+
+/* ══════════════════════════════════════════════
+   CRONOMETRO
+══════════════════════════════════════════════ */
+let timerInterval = null;
+
+function timerGetMs() {
+  return state.timerStart === null
+    ? state.timerMs
+    : state.timerMs + (Date.now() - state.timerStart);
+}
+function timerStart() {
+  if (state.timerStart !== null) return;
+  state.timerStart = Date.now();
+  timerInterval = setInterval(timerTick, 500);
+  document.getElementById('btn-start').disabled = true;
+  document.getElementById('btn-stop').disabled  = false;
+  document.getElementById('timer-display').classList.add('running');
+  timerTick();
+}
+function timerStop() {
+  if (state.timerStart === null) return;
+  state.timerMs    = timerGetMs();
+  state.timerStart = null;
+  clearInterval(timerInterval); timerInterval = null;
+  document.getElementById('btn-start').disabled = false;
+  document.getElementById('btn-stop').disabled  = true;
+  document.getElementById('timer-display').classList.remove('running');
+  timerTick();
+  saveState();
+}
+function timerReset() {
+  timerStop();
+  state.timerMs = 0;
+  timerTick();
+  saveState();
+}
+function timerTick() {
+  const ms  = timerGetMs();
+  const sec = Math.floor(ms / 1000);
+  const mm  = String(Math.floor(sec/60)).padStart(2,'0');
+  const ss  = String(sec % 60).padStart(2,'0');
+  document.getElementById('timer-display').textContent = `${mm}:${ss}`;
+
+  const traveled = calcTraveled();
+  const paceEl   = document.getElementById('timer-pace');
+  if (ms > 5000 && traveled > 0) {
+    document.getElementById('pace-val').textContent = ((traveled/ms)*60000).toFixed(1);
+    paceEl.style.display = '';
+  } else {
+    paceEl.style.display = 'none';
+  }
+}
+
+/* ══════════════════════════════════════════════
+   TASTIERINO
+══════════════════════════════════════════════ */
+let ndBuffer = '';
+
+function ndRender() {
+  const el = document.getElementById('nd-value');
+  if (!ndBuffer) {
+    el.textContent = '_ _';
+    el.className = 'placeholder';
+  } else {
+    el.textContent = ndBuffer;
+    el.className = 'has-value';
+  }
+}
+
+function ndKey(digit) {
+  clearError();
+  if (ndBuffer.length >= 3) return; // max 3 cifre
+  ndBuffer += digit;
+  // previeni numeri > 100 durante la digitazione
+  if (parseInt(ndBuffer) > 100) { ndBuffer = ndBuffer.slice(0,-1); return; }
+  ndRender();
+}
+
+function ndDel() {
+  clearError();
+  ndBuffer = ndBuffer.slice(0, -1);
+  ndRender();
+}
+
+function ndConfirm() {
+  clearError();
+  const val = parseInt(ndBuffer);
+
+  if (!ndBuffer || isNaN(val) || val < 1 || val > 100) {
+    showError('Inserisci un numero tra 1 e 100.');
+    shakeDisplay(); return;
+  }
+  if (state.delivered.includes(val)) {
+    showError(`L'uovo #${val} è già stato consegnato!`);
+    shakeDisplay(); return;
+  }
+
+  // avvio automatico cronometro alla prima consegna
+  if (state.delivered.length === 0 && state.timerStart === null && state.timerMs === 0) {
+    timerStart();
+  }
+
+  state.delivered.push(val);
+  state.history.push({ egg: val, cumulative: calcTraveled() });
+  saveState();
+
+  ndBuffer = '';
+  ndRender();
+  updateUI(val);
+}
+
+function shakeDisplay() {
+  const el = document.getElementById('nd-value');
+  el.classList.remove('error-val');
+  void el.offsetWidth;
+  el.classList.add('error-val');
+  setTimeout(() => el.classList.remove('error-val'), 350);
+}
+
+/* ══════════════════════════════════════════════
+   UNDO
+══════════════════════════════════════════════ */
+function undoLast() {
+  if (!state.history.length) return;
+  const last = state.history.pop();
+  const idx  = state.delivered.lastIndexOf(last.egg);
+  if (idx !== -1) state.delivered.splice(idx, 1);
+  saveState();
+  clearError();
+  ndBuffer = '';
+  ndRender();
+  updateUI();
+}
+
+/* ══════════════════════════════════════════════
+   ERRORI
+══════════════════════════════════════════════ */
+function showError(msg) { document.getElementById('error-msg').textContent = msg; }
+function clearError()   { document.getElementById('error-msg').textContent = ''; }
+
+/* ══════════════════════════════════════════════
+   UPDATE UI
+══════════════════════════════════════════════ */
+function updateUI(flashEgg) {
+  const traveled  = calcTraveled();
+  const remaining = calcRemaining();
+  const done      = state.delivered.length;
+  const left      = TOTAL_EGGS - done;
+  const avg       = calcAvg();
+
+  document.getElementById('stat-remaining').textContent = left;
+  document.getElementById('stat-done').textContent      = done;
+  document.getElementById('stat-traveled').textContent  = fmt(traveled);
+  document.getElementById('stat-left').textContent      = fmt(remaining);
+  document.getElementById('stat-avg').textContent       = avg !== null ? avg : '—';
+  document.getElementById('prog-eggs').style.width = ((done/TOTAL_EGGS)*100) + '%';
+
+  // griglia
+  const dSet = new Set(state.delivered);
+  document.querySelectorAll('.egg-cell').forEach(cell => {
+    const n = +cell.dataset.n;
+    const wasDone = cell.classList.contains('delivered');
+    const isDone  = dSet.has(n);
+    cell.classList.toggle('delivered', isDone);
+    if (flashEgg === n && isDone && !wasDone) {
+      cell.classList.remove('flash');
+      void cell.offsetWidth;
+      cell.classList.add('flash');
+      setTimeout(() => cell.classList.remove('flash'), 550);
+    }
+    cell.title = isDone
+      ? `Uovo ${n} — consegnato (${2*n} m)`
+      : `Uovo ${n} — ${2*n} m totali`;
+  });
+
+  // storico
+  renderHistory();
+
+  // undo btn
+  document.getElementById('undo-btn').disabled = !state.history.length;
+
+  // vittoria
+  if (done === TOTAL_EGGS) {
+    timerStop();
+    const ms = timerGetMs();
+    const mm = Math.floor(ms/60000);
+    const ss = String(Math.floor((ms%60000)/1000)).padStart(2,'0');
+    document.getElementById('victory').style.display = 'block';
+    document.getElementById('victory-msg').innerHTML =
+      `100 uova consegnate! 🎉<br>` +
+      `Distanza: <strong>${fmt(TOTAL_METERS)} m</strong>` +
+      (ms > 0 ? ` &nbsp;·&nbsp; Tempo: <strong>${mm}:${ss}</strong>` : '') +
+      (avg ? ` &nbsp;·&nbsp; Media: <strong>${avg} m/viaggio</strong>` : '');
+    document.getElementById('input-section').style.opacity      = '0.4';
+    document.getElementById('input-section').style.pointerEvents = 'none';
+  } else {
+    document.getElementById('victory').style.display = 'none';
+    document.getElementById('input-section').style.opacity      = '1';
+    document.getElementById('input-section').style.pointerEvents = '';
+  }
+}
+
+function renderHistory() {
+  const ul = document.getElementById('history-list');
+  if (!state.history.length) {
+    ul.innerHTML = '<li class="history-empty">Nessuna consegna ancora registrata.</li>';
+    return;
+  }
+  ul.innerHTML = [...state.history].reverse().map((h, i) => `
+    <li>
+      <span>${i===0?'🆕 ':''}Uovo <span class="hi-egg">#${h.egg}</span>
+        &nbsp;— <span class="hi-dist">+${2*h.egg} m</span></span>
+      <span class="hi-total">totale: ${fmt(h.cumulative)} m</span>
+    </li>
+  `).join('');
+}
+
+function fmt(n) { return n.toLocaleString('it-IT'); }
+
+/* ══════════════════════════════════════════════
+   RESET
+══════════════════════════════════════════════ */
+function openResetModal() { document.getElementById('modal').classList.add('open'); }
+function closeModal()     { document.getElementById('modal').classList.remove('open'); }
+function confirmReset() {
+  timerStop();
+  state = defaultState();
+  saveState();
+  closeModal();
+  ndBuffer = '';
+  ndRender();
+  clearError();
+  document.getElementById('timer-display').textContent = '00:00';
+  document.getElementById('timer-display').classList.remove('running');
+  document.getElementById('btn-start').disabled = false;
+  document.getElementById('btn-stop').disabled  = true;
+  document.getElementById('timer-pace').style.display = 'none';
+  updateUI();
+}
+
+/* ══════════════════════════════════════════════
+   GRIGLIA INIT
+══════════════════════════════════════════════ */
+function buildGrid() {
+  const g = document.getElementById('egg-grid');
+  g.innerHTML = '';
+  for (let i=1; i<=TOTAL_EGGS; i++) {
+    const c = document.createElement('div');
+    c.className = 'egg-cell';
+    c.dataset.n = i;
+    c.innerHTML = `<span>${i}</span>`;
+    g.appendChild(c);
+  }
+}
+
+/* ══════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════ */
+buildGrid();
+ndRender();
+updateUI();
+timerTick();
+</script>
+</body>
+</html>
