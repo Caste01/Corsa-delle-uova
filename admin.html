@@ -493,7 +493,12 @@ async function syncToWorker(){
   const payload = {
     delivered:  state.delivered,
     history:    state.history,
-    timerMs:    timerGetMs(),
+    // ATTENZIONE: qui va la base "congelata" (state.timerMs), MAI
+    // timerGetMs(). Se mandassi il valore già calcolato insieme a
+    // timerStart invariato, chi lo riceve farebbe timerMs+(ora-timerStart)
+    // sommando due volte lo stesso tempo trascorso — è il bug che ha
+    // fatto correre il sito sempre più avanti rispetto all'admin.
+    timerMs:    state.timerMs,
     timerStart: state.timerStart,
   };
   try {
@@ -728,10 +733,11 @@ async function initApp(){
   await loadFromWorker();
   updateUI();
   timerTick();
-  // heartbeat: rimanda lo stato ogni 4s come rete di sicurezza, così un
-  // eventuale aggiornamento perso (offline, errore, tap in rapida
-  // successione) viene comunque recuperato entro pochi secondi
-  setInterval(syncToWorker, 4000);
+  // NB: niente heartbeat periodico qui — syncToWorker() già ritenta da
+  // solo in caso di errore (vedi syncRetryTimer). Riscrivere su KV a
+  // intervalli fissi anche quando non cambia nulla peggiora solo la
+  // latenza di propagazione di Cloudflare KV (chiave scritta troppo
+  // spesso = letture stantie più a lungo su altre regioni).
 }
 </script>
 </body>
