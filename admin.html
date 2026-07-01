@@ -481,9 +481,10 @@ function setSyncStatus(status, label){
 async function syncToWorker(){
   setSyncStatus('syncing','Sincronizzazione...');
   const payload = {
-    delivered: state.delivered,
-    history:   state.history,
-    timerMs:   timerGetMs(),
+    delivered:    state.delivered,
+    history:      state.history,
+    timerMs:      timerGetMs(),
+    timerRunning: state.timerStart !== null,
   };
   try {
     const res = await fetch(WORKER_URL+'/update', {

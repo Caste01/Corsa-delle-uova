@@ -258,7 +258,7 @@
    ⚙️  CONFIGURAZIONE
 ══════════════════════════════════════════════ */
 const WORKER_URL    = 'https://corsadelleuova.matteocastelli86.workers.dev';
-const POLL_INTERVAL = 5000;
+const POLL_INTERVAL = 3000;
 
 /* ══════════════════════════════════════════════
    TEMA
@@ -291,8 +291,32 @@ function switchTab(name){
 const TOTAL_EGGS   = 100;
 const TOTAL_METERS = 2*(TOTAL_EGGS*(TOTAL_EGGS+1)/2);
 
-let lastFetchedAt = null;
-let prevDelivered = new Set();
+let lastFetchedAt  = null;
+let prevDelivered  = new Set();
+
+// timer locale che scorre tra un polling e l'altro
+let localTimerMs      = 0;
+let localTimerRunning = false;
+let localTimerBase    = 0; // Date.now() al momento dell'ultimo snapshot
+
+function localTimerTick() {
+  const el = document.getElementById('v-timer');
+  if (!el) return;
+  const ms  = localTimerRunning ? localTimerMs + (Date.now() - localTimerBase) : localTimerMs;
+  const sec = Math.floor(ms / 1000);
+  el.textContent = String(Math.floor(sec / 60)).padStart(2,'0') + ':' + String(sec % 60).padStart(2,'0');
+  el.className   = localTimerRunning ? 'running' : '';
+
+  const traveled = parseFloat(document.getElementById('stat-traveled').textContent.replace(/\./g,'').replace(',','.')) || 0;
+  const pace = document.getElementById('v-pace');
+  if (ms > 5000 && traveled > 0) {
+    document.getElementById('v-pace-val').textContent = ((traveled / ms) * 60000).toFixed(1);
+    pace.style.display = '';
+  } else {
+    pace.style.display = 'none';
+  }
+}
+setInterval(localTimerTick, 500);
 
 /* ══════════════════════════════════════════════
    POLLING
@@ -355,14 +379,11 @@ function renderAll(state){
   document.getElementById('stat-avg').textContent       = avg!==null?avg:'—';
   document.getElementById('prog-eggs').style.width      = ((done/TOTAL_EGGS)*100)+'%';
 
-  // timer snapshot
-  const sec=Math.floor(timerMs/1000);
-  document.getElementById('v-timer').textContent =
-    String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0');
-  if(timerMs>5000&&traveled>0){
-    document.getElementById('v-pace-val').textContent=((traveled/timerMs)*60000).toFixed(1);
-    document.getElementById('v-pace').style.display='';
-  }
+  // aggiorna riferimenti per il timer locale
+  localTimerMs      = timerMs;
+  localTimerRunning = !!state.timerRunning;
+  localTimerBase    = Date.now();
+  localTimerTick();
 
   // griglia con pop su nuove consegne
   const dSet=new Set(delivered);
